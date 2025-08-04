@@ -1,0 +1,53 @@
+from ibm_watson import AssistantV1
+    from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
+
+# Replace with your API Key and Service URL
+    API_KEY = 'YOUR_WATSON_ASSISTANT_API_KEY'
+    SERVICE_URL = 'YOUR_WATSON_ASSISTANT_SERVICE_URL'
+    ASSISTANT_ID = 'YOUR_ASSISTANT_ID' # Found in Watson Assistant overview
+
+    authenticator = IAMAuthenticator(API_KEY)
+    assistant = AssistantV1(
+        version='2021-06-14', # Use the latest API version
+        authenticator=authenticator
+    )
+    assistant.set_service_url(SERVICE_URL)
+
+def send_message_to_watson(user_input, session_id=None):
+        try:
+            # If no session_id, create a new session
+            if not session_id:
+                session_response = assistant.create_session(
+                    assistant_id=ASSISTANT_ID
+                ).get_result()
+                session_id = session_response['session_id']
+
+            response = assistant.message(
+                assistant_id=ASSISTANT_ID,
+                session_id=session_id,
+                input={
+                    'text': user_input
+                }
+            ).get_result()
+
+            # Extract the text response from Watson
+            if 'output' in response and 'generic' in response['output']:
+                for item in response['output']['generic']:
+                    if item['response_type'] == 'text':
+                        return item['text'], session_id
+            return "I'm sorry, I couldn't understand your request.", session_id
+
+        except Exception as e:
+            return f"An error occurred: {e}", session_id
+
+    if __name__ == "__main__":
+        print("Chatbot: Hello! I can recommend some books. What genre are you interested in?")
+        current_session_id = None
+        while True:
+            user_input = input("You: ")
+            if user_input.lower() == 'exit':
+                print("Chatbot: Goodbye!")
+                break
+            
+            response_text, current_session_id = send_message_to_watson(user_input, current_session_id)
+            print(f"Chatbot: {response_text}")
